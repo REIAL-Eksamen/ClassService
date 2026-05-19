@@ -3,12 +3,13 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace ClassService.Models;
 
-public class Center
+public class ClassTemplate
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
     public string? Id { get; set; }
 
-    public string Name { get; set; } = "";
-    public string Address { get; set; } = "";
+    public string ClassName { get; set; } = "";
+    public string ClassDescription { get; set; } = "";
+    public string ClassType { get; set; } = "";
 }

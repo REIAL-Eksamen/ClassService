@@ -1,22 +1,30 @@
-using System.ComponentModel.DataAnnotations;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace ClassService.Models;
+public enum ClassStatus { Scheduled, Active, Cancelled, Done }
 
-public enum ClassStatus {Scheduled, Active, Cancelled, Done}
 public class Class
 {
-    public int ClassId { get; set; }
-    [Required, MaxLength (50)]
-    public string ClassName { get; set; }
-    [Required, MaxLength(250)]
-    public string ClassDescription { get; set; }
-    [Required, MaxLength(50)]
-    public string ClassType { get; set; }
+    [BsonId]
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? Id { get; set; }
+
+    public string ClassName { get; set; } = "";
+    public string ClassDescription { get; set; } = "";
+    public string ClassType { get; set; } = "";
+    public string InstructorId { get; set; } = "";
+
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string CenterId { get; set; } = "";
+
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string ClassroomId { get; set; } = "";
+
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
-    [Range (0, 100)]
     public int? ClassCapacity { get; set; }
-    public ClassStatus? Status { get; set; } =  ClassStatus.Scheduled;
-    public List<string>? Attendees { get; set; } = [];
-    public List<string>? Waitlist { get; set; } = [];
+    public ClassStatus Status { get; set; } = ClassStatus.Scheduled;
+    public List<string> AttendeeIds { get; set; } = [];
+    public List<string> WaitlistIds { get; set; } = [];
 }
