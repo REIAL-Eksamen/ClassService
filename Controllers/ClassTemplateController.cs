@@ -1,3 +1,4 @@
+using ClassService.DTOs;
 using ClassService.Models;
 using ClassService.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -5,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ClassService.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class ClassTemplateController : ControllerBase
 {
     private readonly ClassTemplateService _service;
@@ -20,28 +21,35 @@ public class ClassTemplateController : ControllerBase
     public async Task<ActionResult<ClassTemplate>> GetById(string id)
     {
         var template = await _service.GetByIdAsync(id);
-        return template is null ? NotFound($"Skabelon {id} findes ikke.") : Ok(template);
+        return template is null ? NotFound($"Template {id} findes ikke.") : Ok(template);
     }
 
     [HttpPost]
-    public async Task<ActionResult<ClassTemplate>> Create([FromBody] ClassTemplate? template)
+    public async Task<ActionResult<ClassTemplate>> Create([FromBody] CreateClassTemplateDTO? dto)
     {
-        if (template is null)
+        if (dto is null)
             return BadRequest("Request body cannot be null.");
+
+        var template = new ClassTemplate
+        {
+            ClassName = dto.ClassName,
+            ClassDescription = dto.ClassDescription,
+            ClassType = dto.ClassType
+        };
 
         await _service.CreateAsync(template);
         return CreatedAtAction(nameof(GetById), new { id = template.Id }, template);
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(string id, [FromBody] ClassTemplate? updated)
+    public async Task<IActionResult> Update(string id, [FromBody] CreateClassTemplateDTO? dto)
     {
-        if (updated is null)
+        if (dto is null)
             return BadRequest("Request body cannot be null.");
 
         try
         {
-            await _service.UpdateAsync(id, updated);
+            await _service.UpdateAsync(id, dto);
             return NoContent();
         }
         catch (KeyNotFoundException e)

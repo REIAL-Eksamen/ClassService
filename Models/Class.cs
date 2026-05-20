@@ -2,6 +2,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace ClassService.Models;
+
 public enum ClassStatus { Scheduled, Active, Cancelled, Done }
 
 public class Class
@@ -25,6 +26,4 @@ public class Class
     public DateTime? EndTime { get; set; }
     public int? ClassCapacity { get; set; }
     public ClassStatus Status { get; set; } = ClassStatus.Scheduled;
-    public List<string> AttendeeIds { get; set; } = [];
-    public List<string> WaitlistIds { get; set; } = [];
 }

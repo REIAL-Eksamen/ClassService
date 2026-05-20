@@ -1,3 +1,4 @@
+using ClassService.DTOs;
 using ClassService.Models;
 using MongoDB.Driver;
 
@@ -11,7 +12,7 @@ public class ClassTemplateService
     {
         var client = new MongoClient(config["MongoDB:ConnectionString"]);
         var db = client.GetDatabase(config["MongoDB:Database"]);
-        _templates = db.GetCollection<ClassTemplate>("class_templates");
+        _templates = db.GetCollection<ClassTemplate>("ClassTemplateCollection");
     }
 
     public Task<List<ClassTemplate>> GetAllAsync() =>
@@ -23,19 +24,22 @@ public class ClassTemplateService
     public Task CreateAsync(ClassTemplate template) =>
         _templates.InsertOneAsync(template);
 
-    public async Task UpdateAsync(string id, ClassTemplate updated)
+    public async Task UpdateAsync(string id, CreateClassTemplateDTO dto)
     {
         var existing = await GetByIdAsync(id)
-                       ?? throw new KeyNotFoundException($"Skabelon {id} findes ikke.");
+                       ?? throw new KeyNotFoundException($"Template {id} findes ikke.");
 
-        updated.Id = id;
-        await _templates.ReplaceOneAsync(x => x.Id == id, updated);
+        existing.ClassName = dto.ClassName;
+        existing.ClassDescription = dto.ClassDescription;
+        existing.ClassType = dto.ClassType;
+
+        await _templates.ReplaceOneAsync(x => x.Id == id, existing);
     }
 
     public async Task DeleteAsync(string id)
     {
         var result = await _templates.DeleteOneAsync(x => x.Id == id);
         if (result.DeletedCount == 0)
-            throw new KeyNotFoundException($"Skabelon {id} findes ikke.");
+            throw new KeyNotFoundException($"Template {id} findes ikke.");
     }
 }

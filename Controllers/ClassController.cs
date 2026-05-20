@@ -1,39 +1,53 @@
-using ClassService.Models;
-using ClassService.DTO;
+using ClassService.DTOs;
 using ClassService.Services;
+using ClassService.Clients;
+using ClassService.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClassService.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class ClassController : ControllerBase
 {
-    private readonly Services.ClassService _classService;
-    private readonly ClassTemplateService _templateService;
+    private readonly Services.ClassService _service;
+    private readonly InstructorClient _instructorClient;
 
-    public ClassController(Services.ClassService classService, ClassTemplateService templateService)
+    public ClassController(Services.ClassService service, InstructorClient instructorClient)
     {
-        _classService = classService;
-        _templateService = templateService;
+        _service = service;
+        _instructorClient = instructorClient;
     }
 
-    // ── Hold ────────────────────────────────────────────────
+    [HttpGet]
+    public async Task<ActionResult<List<Class>>> GetAll() =>
+        Ok(await _service.GetAllAsync());
 
-    [HttpGet("scheduledclasses")]
-    public async Task<ActionResult<List<ClassResponse>>> GetAllScheduledClasses()
+    [HttpGet("{id}")]
+    public async Task<ActionResult<Class>> GetById(string id)
     {
-        var classes = await _classService.GetAllAsync();
-        return Ok(classes);
+        var c = await _service.GetByIdAsync(id);
+        return c is null ? NotFound($"Class {id} findes ikke.") : Ok(c);
     }
 
-    [HttpGet("scheduledclasses/{id}")]
-    public async Task<ActionResult<ClassResponse>> GetScheduledClassById(string id)
+    [HttpGet("bycenter/{centerId}")]
+    public async Task<ActionResult<List<Class>>> GetByCenter(string centerId) =>
+        Ok(await _service.GetByCenterAsync(centerId));
+
+    [HttpPost]
+    public async Task<ActionResult<Class>> Create([FromBody] CreateClassDTO? dto)
     {
+        if (dto is null)
+            return BadRequest("Request body cannot be null.");
+
+        /* var instructor = await _instructorClient.GetInstructorAsync(int.Parse(dto.InstructorId));
+        if (instructor is null)
+            return NotFound($"Instruktør {dto.InstructorId} findes ikke."); */
+
         try
         {
-            var result = await _classService.GetWithDetailsAsync(id);
-            return Ok(result);
+            var newClass = await _service.CreateFromTemplateAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = newClass.Id }, newClass);
         }
         catch (KeyNotFoundException e)
         {
@@ -41,57 +55,19 @@ public class ClassController : ControllerBase
         }
     }
 
-    [HttpGet("scheduledclasses/bycenter/{centerId}")]
-    public async Task<ActionResult<List<Class>>> GetClassesByCenter(string centerId)
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(string id, [FromBody] CreateClassDTO? dto)
     {
-        var classes = await _classService.GetByCenterAsync(centerId);
-        return Ok(classes);
-    }
-
-    [HttpPost("scheduledclasses")]
-    public async Task<ActionResult<Class>> CreateScheduledClass([FromBody] CreateClassRequest? request)
-    {
-        if (request is null)
+        if (dto is null)
             return BadRequest("Request body cannot be null.");
 
-        try
-        {
-            var created = await _classService.CreateAsync(request);
-            return CreatedAtAction(nameof(GetScheduledClassById), new { id = created.Id }, created);
-        }
-        catch (ArgumentException e)
-        {
-            return BadRequest(e.Message);
-        }
-    }
-
-    [HttpPut("scheduledclasses/{id}")]
-    public async Task<IActionResult> UpdateScheduledClass(string id, [FromBody] CreateClassRequest? request)
-    {
-        if (request is null)
-            return BadRequest("Request body cannot be null.");
+        var instructor = await _instructorClient.GetInstructorAsync(int.Parse(dto.InstructorId));
+        if (instructor is null)
+            return NotFound($"Instruktør {dto.InstructorId} findes ikke.");
 
         try
         {
-            await _classService.UpdateAsync(id, request);
-            return NoContent();
-        }
-        catch (KeyNotFoundException e)
-        {
-            return NotFound(e.Message);
-        }
-        catch (ArgumentException e)
-        {
-            return BadRequest(e.Message);
-        }
-    }
-
-    [HttpDelete("scheduledclasses/{id}")]
-    public async Task<IActionResult> DeleteScheduledClass(string id)
-    {
-        try
-        {
-            await _classService.DeleteAsync(id);
+            await _service.UpdateAsync(id, dto);
             return NoContent();
         }
         catch (KeyNotFoundException e)
@@ -100,57 +76,17 @@ public class ClassController : ControllerBase
         }
     }
 
-    // ── Skabeloner ──────────────────────────────────────────
-
-    [HttpGet("templates")]
-    public async Task<ActionResult<List<ClassTemplate>>> GetAllTemplates()
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(string id)
     {
-        var templates = await _templateService.GetAllAsync();
-        return Ok(templates);
-    }
-
-    [HttpGet("templates/{id}")]
-    public async Task<ActionResult<ClassTemplate>> GetTemplateById(string id)
-    {
-        var template = await _templateService.GetByIdAsync(id);
-        return template is null ? NotFound($"Skabelon {id} findes ikke.") : Ok(template);
-    }
-
-    [HttpPost("templates")]
-    public async Task<ActionResult<ClassTemplate>> CreateTemplate([FromBody] ClassTemplate? template)
-    {
-        if (template is null)
-            return BadRequest("Request body cannot be null.");
-
-        await _templateService.CreateAsync(template);
-        return CreatedAtAction(nameof(GetTemplateById), new { id = template.Id }, template);
-    }
-
-    [HttpPut("templates/{id}")]
-    public async Task<IActionResult> UpdateTemplate(string id, [FromBody] ClassTemplate? updated)
-    {
-        if (updated is null)
-            return BadRequest("Request body cannot be null.");
-
         try
         {
-            await _templateService.UpdateAsync(id, updated);
+            await _service.DeleteAsync(id);
             return NoContent();
         }
         catch (KeyNotFoundException e)
         {
             return NotFound(e.Message);
         }
-    }
-
-    [HttpDelete("templates/{id}")]
-    public async Task<IActionResult> DeleteTemplate(string id)
-    {
-        var existing = await _templateService.GetByIdAsync(id);
-        if (existing is null)
-            return NotFound($"Skabelon {id} findes ikke.");
-
-        await _templateService.DeleteAsync(id);
-        return NoContent();
     }
 }
