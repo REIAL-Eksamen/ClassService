@@ -7,12 +7,12 @@ public class Classroom
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
-    public string? ClassroomId { get; set; }
+    public string Id { get; set; }
 
-    public string Name { get; set; } = "";
+    public string ClassroomName { get; set; } = "";
     public int Capacity { get; set; }
 
     // Classroom tilhører ét center
-    [BsonRepresentation(BsonType.ObjectId)]
+    //[BsonRepresentation(BsonType.ObjectId)]
     public string CenterId { get; set; } = "";
 }

@@ -1,3 +1,4 @@
+using ClassService.DTOs;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
@@ -18,12 +19,10 @@ public class Class
 
     [BsonRepresentation(BsonType.ObjectId)]
     public string CenterId { get; set; } = "";
-
-    [BsonRepresentation(BsonType.ObjectId)]
-    public string ClassroomId { get; set; } = "";
+    
+    public ClassroomDto? Classroom { get; set; }
 
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
-    public int? ClassCapacity { get; set; }
     public ClassStatus Status { get; set; } = ClassStatus.Scheduled;
 }

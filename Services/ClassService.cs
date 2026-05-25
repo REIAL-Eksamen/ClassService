@@ -8,6 +8,7 @@ public class ClassService
 {
     private readonly IMongoCollection<Class> _classes;
     private readonly IMongoCollection<ClassTemplate> _templates;
+    private readonly IMongoCollection<Classroom> _classrooms;
 
     public ClassService(IConfiguration config)
     {
@@ -15,6 +16,7 @@ public class ClassService
         var db = client.GetDatabase(config["MongoDB:Database"]);
         _classes = db.GetCollection<Class>("ClassCollection");
         _templates = db.GetCollection<ClassTemplate>("ClassTemplateCollection");
+        _classrooms = db.GetCollection<Classroom>("ClassroomCollection");
     }
 
     public Task<List<Class>> GetAllAsync() =>
@@ -28,8 +30,15 @@ public class ClassService
 
     public async Task<Class> CreateFromTemplateAsync(CreateClassDTO dto)
     {
+        if (dto.Classroom is null)
+            throw new ArgumentException("Classroom må ikke være null.");
+        
         var template = await _templates.Find(x => x.Id == dto.ClassTemplateId).FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Template {dto.ClassTemplateId} findes ikke.");
+        
+        var classroom = await _classrooms.Find(x => x.Id == dto.Classroom.ClassroomId && x.CenterId == dto.CenterId).FirstOrDefaultAsync();
+        if (classroom is null)
+            throw new KeyNotFoundException($"Classroom {dto.Classroom.ClassroomId} tilhører ikke center {dto.CenterId}.");
 
         var newClass = new Class
         {
@@ -38,10 +47,9 @@ public class ClassService
             ClassType = template.ClassType,
             InstructorId = dto.InstructorId,
             CenterId = dto.CenterId,
-            ClassroomId = dto.ClassroomId,
+            Classroom = dto.Classroom,
             StartTime = dto.StartTime,
             EndTime = dto.EndTime,
-            ClassCapacity = dto.ClassCapacity,
             Status = ClassStatus.Scheduled
         };
 
@@ -51,21 +59,27 @@ public class ClassService
 
     public async Task UpdateAsync(string id, CreateClassDTO dto)
     {
+        if (dto.Classroom is null)
+            throw new ArgumentException("Classroom må ikke være null.");
+        
         var existing = await GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Class {id} findes ikke.");
 
         var template = await _templates.Find(x => x.Id == dto.ClassTemplateId).FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException($"Template {dto.ClassTemplateId} findes ikke.");
+        
+        var classroom = await _classrooms.Find(x => x.Id == dto.Classroom.ClassroomId && x.CenterId == dto.CenterId).FirstOrDefaultAsync();
+        if (classroom is null)
+            throw new KeyNotFoundException($"Classroom {dto.Classroom.ClassroomId} tilhører ikke center {dto.CenterId}.");
 
         existing.ClassName = template.ClassName;
         existing.ClassDescription = template.ClassDescription;
         existing.ClassType = template.ClassType;
         existing.InstructorId = dto.InstructorId;
         existing.CenterId = dto.CenterId;
-        existing.ClassroomId = dto.ClassroomId;
+        existing.Classroom = dto.Classroom;
         existing.StartTime = dto.StartTime;
         existing.EndTime = dto.EndTime;
-        existing.ClassCapacity = dto.ClassCapacity;
 
         await _classes.ReplaceOneAsync(x => x.Id == id, existing);
     }

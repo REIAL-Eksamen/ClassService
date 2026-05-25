@@ -1,6 +1,7 @@
 using ClassService.Services;
 using ClassService.Clients;
 using Scalar.AspNetCore;
+using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,7 @@ builder.Services.AddOpenApi();
 
 
 // Services
+builder.Services.AddSingleton<IMongoClient>(new MongoClient(builder.Configuration["CosmosDb:AccountKey"]));
 builder.Services.AddSingleton<ClassService.Services.ClassService>();
 builder.Services.AddSingleton<ClassTemplateService>();
 

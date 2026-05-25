@@ -11,9 +11,9 @@ public class InstructorClient
         _httpClient = httpClient;
     }
 
-    public async Task<InstructorDTO?> GetInstructorAsync(int instructorId)
+    public async Task<InstructorDTO?> GetInstructorAsync(string instructorId)
     {
-        var response = await _httpClient.GetAsync($"api/admin/{instructorId}");
+        var response = await _httpClient.GetAsync($"admin/{instructorId}");
         if (!response.IsSuccessStatusCode)
             return null;
 
