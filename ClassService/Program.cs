@@ -11,7 +11,7 @@ builder.Services.AddOpenApi();
 
 // MongoDB / CosmosDB
 builder.Services.AddSingleton<IMongoClient>(
-    new MongoClient(builder.Configuration["CosmosDb:AccountKey"]));
+    new MongoClient(builder.Configuration["MongoDB:ConnectionString"]));
 builder.Services.AddSingleton<IMongoDatabase>(sp =>
     sp.GetRequiredService<IMongoClient>()
         .GetDatabase(builder.Configuration["MongoDB:Database"]));

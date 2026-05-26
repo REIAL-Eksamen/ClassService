@@ -2752,32 +2752,33 @@
     ]
   },
   "packageFolders": {
-    "/Users/lukassloth/.nuget/packages/": {}
+    "/home/dort/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/lukassloth/Private/Skole/Eksamen/4SemEksamen/ClassService/ClassService.Tests/ClassService.Tests.csproj",
+      "projectUniqueName": "/home/dort/ITA/Eksamen/ClassService/ClassService.Tests/ClassService.Tests.csproj",
       "projectName": "ClassService.Tests",
-      "projectPath": "/Users/lukassloth/Private/Skole/Eksamen/4SemEksamen/ClassService/ClassService.Tests/ClassService.Tests.csproj",
-      "packagesPath": "/Users/lukassloth/.nuget/packages/",
-      "outputPath": "/Users/lukassloth/Private/Skole/Eksamen/4SemEksamen/ClassService/ClassService.Tests/obj/",
+      "projectPath": "/home/dort/ITA/Eksamen/ClassService/ClassService.Tests/ClassService.Tests.csproj",
+      "packagesPath": "/home/dort/.nuget/packages/",
+      "outputPath": "/home/dort/ITA/Eksamen/ClassService/ClassService.Tests/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/Users/lukassloth/.nuget/NuGet/NuGet.Config"
+        "/home/dort/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
+        "/usr/lib/dotnet/library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
         "net10.0": {
           "targetAlias": "net10.0",
           "projectReferences": {
-            "/Users/lukassloth/Private/Skole/Eksamen/4SemEksamen/ClassService/ClassService/ClassService.csproj": {
-              "projectPath": "/Users/lukassloth/Private/Skole/Eksamen/4SemEksamen/ClassService/ClassService/ClassService.csproj"
+            "/home/dort/ITA/Eksamen/ClassService/ClassService/ClassService.csproj": {
+              "projectPath": "/home/dort/ITA/Eksamen/ClassService/ClassService/ClassService.csproj"
             }
           }
         }
@@ -2823,7 +2824,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.103/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.107/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.CSharp": "(,4.7.32767]",
           "Microsoft.VisualBasic": "(,10.4.32767]",
