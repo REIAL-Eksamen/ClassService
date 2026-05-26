@@ -3,7 +3,7 @@ using ClassService.Models;
 using ClassService.DTOs;
 
 namespace ClassService.Services;
-public class ClassesService
+public class ClassesService : IClassesService
 {
     private readonly IClassRepository _classes;
     private readonly IClassTemplateRepository _templates;

@@ -4,7 +4,7 @@ using ClassService.Repositories;
 
 namespace ClassService.Services;
 
-public class ClassTemplateService
+public class ClassTemplateService : IClassTemplateService
 {
     private readonly IClassTemplateRepository _templates;
 
