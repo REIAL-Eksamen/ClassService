@@ -1,4 +1,3 @@
-# CI pipeline for ClassService
 name: ClassService CI
 on:
   push:
