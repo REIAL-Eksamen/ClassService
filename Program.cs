@@ -22,11 +22,11 @@ builder.Services.AddScoped<IClassTemplateRepository, ClassTemplateRepository>();
 builder.Services.AddScoped<IClassroomRepository, ClassroomRepository>();
 
 // Services
-builder.Services.AddScoped<ClassService.Services.ClassesService>();
+builder.Services.AddScoped<ClassesService>();
 builder.Services.AddScoped<ClassTemplateService>();
 
 // Clients
-builder.Services.AddHttpClient<InstructorClient>(client =>
+builder.Services.AddHttpClient<IInstructorClient, InstructorClient>(client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["AdminService:BaseUrl"]!);
 });

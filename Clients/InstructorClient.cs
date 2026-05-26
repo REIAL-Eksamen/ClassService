@@ -2,7 +2,7 @@ using ClassService.DTOs;
 
 namespace ClassService.Clients;
 
-public class InstructorClient
+public class InstructorClient : IInstructorClient
 {
     private readonly HttpClient _httpClient;
 
