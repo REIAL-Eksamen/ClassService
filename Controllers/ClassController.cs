@@ -11,12 +11,12 @@ namespace ClassService.Controllers;
 [Route("api/[controller]")]
 public class ClassController : ControllerBase
 {
-    private readonly Services.ClassService _service;
+    private readonly Services.ClassesService _service;
     private readonly InstructorClient _instructorClient;
     private readonly IMongoCollection<Classroom> _classroomCollection;
     private readonly IMongoCollection<Class> _classCollection;
 
-    public ClassController(Services.ClassService service, InstructorClient instructorClient, IMongoClient mongoClient)
+    public ClassController(Services.ClassesService service, InstructorClient instructorClient, IMongoClient mongoClient)
     {
         _service = service;
         _instructorClient = instructorClient;

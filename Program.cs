@@ -1,5 +1,6 @@
 using ClassService.Services;
 using ClassService.Clients;
+using ClassService.Repositories;
 using Scalar.AspNetCore;
 using MongoDB.Driver;
 
@@ -8,12 +9,21 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+// MongoDB / CosmosDB
+builder.Services.AddSingleton<IMongoClient>(
+    new MongoClient(builder.Configuration["CosmosDb:AccountKey"]));
+builder.Services.AddSingleton<IMongoDatabase>(sp =>
+    sp.GetRequiredService<IMongoClient>()
+        .GetDatabase(builder.Configuration["MongoDB:Database"]));
 
+// Repositories
+builder.Services.AddScoped<IClassRepository, ClassRepository>();
+builder.Services.AddScoped<IClassTemplateRepository, ClassTemplateRepository>();
+builder.Services.AddScoped<IClassroomRepository, ClassroomRepository>();
 
 // Services
-builder.Services.AddSingleton<IMongoClient>(new MongoClient(builder.Configuration["CosmosDb:AccountKey"]));
-builder.Services.AddSingleton<ClassService.Services.ClassService>();
-builder.Services.AddSingleton<ClassTemplateService>();
+builder.Services.AddScoped<ClassService.Services.ClassesService>();
+builder.Services.AddScoped<ClassTemplateService>();
 
 // Clients
 builder.Services.AddHttpClient<InstructorClient>(client =>

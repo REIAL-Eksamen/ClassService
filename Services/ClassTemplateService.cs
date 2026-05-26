@@ -1,45 +1,43 @@
 using ClassService.DTOs;
 using ClassService.Models;
-using MongoDB.Driver;
+using ClassService.Repositories;
 
 namespace ClassService.Services;
 
 public class ClassTemplateService
 {
-    private readonly IMongoCollection<ClassTemplate> _templates;
+    private readonly IClassTemplateRepository _templates;
 
-    public ClassTemplateService(IConfiguration config)
+    public ClassTemplateService(IClassTemplateRepository templates)
     {
-        var client = new MongoClient(config["MongoDB:ConnectionString"]);
-        var db = client.GetDatabase(config["MongoDB:Database"]);
-        _templates = db.GetCollection<ClassTemplate>("ClassTemplateCollection");
+        _templates = templates;
     }
 
     public Task<List<ClassTemplate>> GetAllAsync() =>
-        _templates.Find(_ => true).ToListAsync();
+        _templates.GetAllAsync();
 
     public Task<ClassTemplate?> GetByIdAsync(string id) =>
-        _templates.Find(x => x.Id == id).FirstOrDefaultAsync();
+        _templates.GetByIdAsync(id);
 
     public Task CreateAsync(ClassTemplate template) =>
-        _templates.InsertOneAsync(template);
+        _templates.InsertAsync(template);
 
     public async Task UpdateAsync(string id, CreateClassTemplateDTO dto)
     {
-        var existing = await GetByIdAsync(id)
+        var existing = await _templates.GetByIdAsync(id)
                        ?? throw new KeyNotFoundException($"Template {id} findes ikke.");
 
         existing.ClassName = dto.ClassName;
         existing.ClassDescription = dto.ClassDescription;
         existing.ClassType = dto.ClassType;
 
-        await _templates.ReplaceOneAsync(x => x.Id == id, existing);
+        await _templates.ReplaceAsync(id, existing);
     }
 
     public async Task DeleteAsync(string id)
     {
-        var result = await _templates.DeleteOneAsync(x => x.Id == id);
-        if (result.DeletedCount == 0)
+        var deleted = await _templates.DeleteAsync(id);
+        if (!deleted)
             throw new KeyNotFoundException($"Template {id} findes ikke.");
     }
 }

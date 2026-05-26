@@ -1,42 +1,37 @@
-using ClassService.DTOs;
+using ClassService.Repositories;
 using ClassService.Models;
-using MongoDB.Driver;
+using ClassService.DTOs;
 
 namespace ClassService.Services;
-
-public class ClassService
+public class ClassesService
 {
-    private readonly IMongoCollection<Class> _classes;
-    private readonly IMongoCollection<ClassTemplate> _templates;
-    private readonly IMongoCollection<Classroom> _classrooms;
+    private readonly IClassRepository _classes;
+    private readonly IClassTemplateRepository _templates;
+    private readonly IClassroomRepository _classrooms;
 
-    public ClassService(IConfiguration config)
+    public ClassesService(
+        IClassRepository classes,
+        IClassTemplateRepository templates,
+        IClassroomRepository classrooms)
     {
-        var client = new MongoClient(config["CosmosDB:AccountKey"]);
-        var db = client.GetDatabase(config["MongoDB:Database"]);
-        _classes = db.GetCollection<Class>("ClassCollection");
-        _templates = db.GetCollection<ClassTemplate>("ClassTemplateCollection");
-        _classrooms = db.GetCollection<Classroom>("ClassroomCollection");
+        _classes = classes;
+        _templates = templates;
+        _classrooms = classrooms;
     }
 
-    public Task<List<Class>> GetAllAsync() =>
-        _classes.Find(_ => true).ToListAsync();
-
-    public Task<Class?> GetByIdAsync(string id) =>
-        _classes.Find(x => x.Id == id).FirstOrDefaultAsync();
-
-    public Task<List<Class>> GetByCenterAsync(string centerId) =>
-        _classes.Find(x => x.CenterId == centerId).ToListAsync();
+    public Task<List<Class>> GetAllAsync() => _classes.GetAllAsync();
+    public Task<Class?> GetByIdAsync(string id) => _classes.GetByIdAsync(id);
+    public Task<List<Class>> GetByCenterAsync(string centerId) => _classes.GetByCenterAsync(centerId);
 
     public async Task<Class> CreateFromTemplateAsync(CreateClassDTO dto)
     {
         if (dto.Classroom is null)
             throw new ArgumentException("Classroom må ikke være null.");
-        
-        var template = await _templates.Find(x => x.Id == dto.ClassTemplateId).FirstOrDefaultAsync()
+
+        var template = await _templates.GetByIdAsync(dto.ClassTemplateId)
             ?? throw new KeyNotFoundException($"Template {dto.ClassTemplateId} findes ikke.");
-        
-        var classroom = await _classrooms.Find(x => x.Id == dto.Classroom.ClassroomId && x.CenterId == dto.CenterId).FirstOrDefaultAsync();
+
+        var classroom = await _classrooms.GetByIdAndCenterAsync(dto.Classroom.ClassroomId, dto.CenterId);
         if (classroom is null)
             throw new KeyNotFoundException($"Classroom {dto.Classroom.ClassroomId} tilhører ikke center {dto.CenterId}.");
 
@@ -53,7 +48,7 @@ public class ClassService
             Status = ClassStatus.Scheduled
         };
 
-        await _classes.InsertOneAsync(newClass);
+        await _classes.InsertAsync(newClass);
         return newClass;
     }
 
@@ -61,14 +56,14 @@ public class ClassService
     {
         if (dto.Classroom is null)
             throw new ArgumentException("Classroom må ikke være null.");
-        
-        var existing = await GetByIdAsync(id)
+
+        var existing = await _classes.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Class {id} findes ikke.");
 
-        var template = await _templates.Find(x => x.Id == dto.ClassTemplateId).FirstOrDefaultAsync()
+        var template = await _templates.GetByIdAsync(dto.ClassTemplateId)
             ?? throw new KeyNotFoundException($"Template {dto.ClassTemplateId} findes ikke.");
-        
-        var classroom = await _classrooms.Find(x => x.Id == dto.Classroom.ClassroomId && x.CenterId == dto.CenterId).FirstOrDefaultAsync();
+
+        var classroom = await _classrooms.GetByIdAndCenterAsync(dto.Classroom.ClassroomId, dto.CenterId);
         if (classroom is null)
             throw new KeyNotFoundException($"Classroom {dto.Classroom.ClassroomId} tilhører ikke center {dto.CenterId}.");
 
@@ -81,13 +76,13 @@ public class ClassService
         existing.StartTime = dto.StartTime;
         existing.EndTime = dto.EndTime;
 
-        await _classes.ReplaceOneAsync(x => x.Id == id, existing);
+        await _classes.ReplaceAsync(id, existing);
     }
 
     public async Task DeleteAsync(string id)
     {
-        var result = await _classes.DeleteOneAsync(x => x.Id == id);
-        if (result.DeletedCount == 0)
+        var deleted = await _classes.DeleteAsync(id);
+        if (!deleted)
             throw new KeyNotFoundException($"Class {id} findes ikke.");
     }
 }
