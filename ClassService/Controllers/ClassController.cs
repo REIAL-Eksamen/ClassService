@@ -12,11 +12,11 @@ namespace ClassService.Controllers;
 public class ClassController : ControllerBase
 {
     private readonly Services.ClassesService _service;
-    private readonly InstructorClient _instructorClient;
+    private readonly IInstructorClient _instructorClient;
     private readonly IMongoCollection<Classroom> _classroomCollection;
     private readonly IMongoCollection<Class> _classCollection;
 
-    public ClassController(Services.ClassesService service, InstructorClient instructorClient, IMongoClient mongoClient)
+    public ClassController(Services.ClassesService service, IInstructorClient instructorClient, IMongoClient mongoClient)
     {
         _service = service;
         _instructorClient = instructorClient;

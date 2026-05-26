@@ -14,7 +14,7 @@ builder.Services.AddSingleton<IMongoClient>(
     new MongoClient(builder.Configuration["MongoDB:ConnectionString"]));
 builder.Services.AddSingleton<IMongoDatabase>(sp =>
     sp.GetRequiredService<IMongoClient>()
-        .GetDatabase(builder.Configuration["MongoDB:Database"]));
+        .GetDatabase(builder.Configuration["MongoDB:DatabaseName"]));
 
 // Repositories
 builder.Services.AddScoped<IClassRepository, ClassRepository>();
