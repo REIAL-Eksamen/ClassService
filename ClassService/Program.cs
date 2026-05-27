@@ -22,8 +22,8 @@ builder.Services.AddScoped<IClassTemplateRepository, ClassTemplateRepository>();
 builder.Services.AddScoped<ICenterRepository, CenterRepository>();  
 
 // Services
-builder.Services.AddScoped<ClassesService>();
-builder.Services.AddScoped<ClassTemplateService>();
+builder.Services.AddScoped<IClassesService, ClassesService>();
+builder.Services.AddScoped<IClassTemplateService, ClassTemplateService>();
 
 // Clients
 builder.Services.AddHttpClient<IAdminClient, AdminClient>(client =>  

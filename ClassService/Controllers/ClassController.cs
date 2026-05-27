@@ -11,13 +11,14 @@ namespace ClassService.Controllers;
 [Route("api/[controller]")]
 public class ClassController : ControllerBase
 {
-    private readonly ClassesService _service;
+    private readonly IClassesService _service;
+    private readonly IClassTemplateService _templateService;
     private readonly IAdminClient _adminClient;
     private readonly ICenterRepository _centerRepository;
     private readonly IClassTemplateRepository _templateRepository;
 
     public ClassController(
-        ClassesService service,
+        IClassesService service,
         IAdminClient adminClient,
         ICenterRepository centerRepository,
         IClassTemplateRepository templateRepository)
