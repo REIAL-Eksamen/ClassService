@@ -9,9 +9,8 @@ namespace ClassService.Controllers;
 [Route("api/[controller]")]
 public class ClassTemplateController : ControllerBase
 {
-    private readonly ClassTemplateService _service;
-
-    public ClassTemplateController(ClassTemplateService service) => _service = service;
+    private readonly IClassTemplateService _service;
+    public ClassTemplateController(IClassTemplateService service) => _service = service;
 
     [HttpGet]
     public async Task<ActionResult<List<ClassTemplate>>> GetAll() =>
@@ -46,7 +45,6 @@ public class ClassTemplateController : ControllerBase
     {
         if (dto is null)
             return BadRequest("Request body cannot be null.");
-
         try
         {
             await _service.UpdateAsync(id, dto);
