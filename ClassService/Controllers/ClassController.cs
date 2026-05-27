@@ -15,6 +15,7 @@ public class ClassController : ControllerBase
     private readonly IInstructorClient _instructorClient;
     private readonly IMongoCollection<Classroom> _classroomCollection;
     private readonly IMongoCollection<Class> _classCollection;
+    private readonly IMongoCollection<Center> _centerCollection;
 
     public ClassController(Services.ClassesService service, IInstructorClient instructorClient, IMongoClient mongoClient)
     {
@@ -23,6 +24,7 @@ public class ClassController : ControllerBase
         var database = mongoClient.GetDatabase("ClassDb");
         _classroomCollection = database.GetCollection<Classroom>("Classrooms");
         _classCollection = database.GetCollection<Class>("Classes");
+        _centerCollection = database.GetCollection<Center>("Centers");
     }
 
     // Henter alle hold
@@ -127,5 +129,38 @@ public class ClassController : ControllerBase
 
         await _classCollection.UpdateOneAsync(c => c.Id == classId, update);
         return Ok();
+    }
+    
+    [HttpGet("overview")]
+    public async Task<ActionResult<List<ClassOverviewDto>>> GetOverview()
+    {
+        var classes = await _service.GetAllAsync();
+        var result = new List<ClassOverviewDto>();
+
+        foreach (var classItem in classes)
+        {
+            var center = await _centerCollection
+                .Find(c => c.Id == classItem.CenterId)
+                .FirstOrDefaultAsync();
+
+            result.Add(new ClassOverviewDto
+            {
+                Id = classItem.Id ?? "",
+                CenterName = center?.Name ?? "Ukendt center",
+                ClassName = classItem.ClassName,
+
+                // Temporary: use InstructorId instead of calling AdminService
+                // This avoids the error: Connection refused (adminservice:5004)
+                InstructorName = classItem.InstructorId,
+
+                StartTime = classItem.StartTime,
+                EndTime = classItem.EndTime,
+                Status = classItem.Status.ToString(),
+                ClassroomName = classItem.Classroom?.ClassroomName ?? "",
+                Capacity = classItem.Classroom?.Capacity ?? 0
+            });
+        }
+
+        return Ok(result);
     }
 }
