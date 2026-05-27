@@ -6,6 +6,7 @@ namespace ClassService.Models;
 public class ClassTemplate
 {
     [BsonId]
+    [BsonElement("id")]
     [BsonRepresentation(BsonType.ObjectId)]
     public string? Id { get; set; }
 

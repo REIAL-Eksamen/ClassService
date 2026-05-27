@@ -1,7 +1,7 @@
-using MongoDB.Driver;
 using Microsoft.AspNetCore.Mvc;
 using ClassService.Models;
-using ClassService.DTOs;
+using ClassService.Clients;
+using ClassService.Repositories;
 
 namespace ClassService.Controllers;
 
@@ -9,50 +9,40 @@ namespace ClassService.Controllers;
 [Route("api/centers")]
 public class CenterController : ControllerBase
 {
-    private readonly IMongoCollection<Center> _centerCollection;
+    private readonly ICenterRepository _centerRepository;
+    private readonly IAdminClient _adminClient;
 
-    public CenterController(IMongoClient mongoClient)
+    public CenterController(ICenterRepository centerRepository, IAdminClient adminClient)
     {
-        var database = mongoClient.GetDatabase("ClassDb");
-        _centerCollection = database.GetCollection<Center>("Centers");
+        _centerRepository = centerRepository;
+        _adminClient = adminClient;
     }
 
-    // Tilføjer en admin til et center. Modtager AdminId, navn og rolle fra AdminService via AdminCenterDto.
-    // Tjekker om admin allerede er tilknyttet centeret før tilføjelse.
-    [HttpPost("{centerId}/admins")]
-    public async Task<IActionResult> AddAdmin(string centerId, [FromBody] AdminCenterDto dto)
+    // Henter alle classrooms på et center
+    [HttpGet("{centerId}/classrooms")]
+    public async Task<IActionResult> GetClassrooms(string centerId)
     {
-        var center = await _centerCollection.Find(c => c.Id == centerId).FirstOrDefaultAsync();
+        var center = await _centerRepository.GetByIdAsync(centerId);
         if (center == null) return NotFound("Center ikke fundet");
 
-        bool findes = center.Admins.Any(a => a.AdminId == dto.AdminId);
-        if (findes) return Conflict("Admin er allerede tilknyttet centeret");
-
-        var update = Builders<Center>.Update
-            .Push(c => c.Admins, new CenterAdmin 
-            { 
-                AdminId = dto.AdminId,
-                FirstName = dto.FirstName,
-                LastName = dto.LastName,
-                Role = dto.Role
-            });
-
-        await _centerCollection.UpdateOneAsync(c => c.Id == centerId, update);
-        return Ok();
+        return Ok(center.Classrooms);
+    }
+    
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAll()
+    {
+        var centers = await _centerRepository.GetAllAsync();
+        return Ok(centers);
     }
 
-    // Henter alle admins på et center med rollen "Instruktør".
-    // Bruges ved holdoprettelse så kun gyldige instruktører kan vælges.
-    [HttpGet("{centerId}/instruktører")]
+    // Henter alle instruktører på et center via AdminService
+    [HttpGet("{centerId}/instructors")]
     public async Task<IActionResult> GetInstructors(string centerId)
     {
-        var center = await _centerCollection.Find(c => c.Id == centerId).FirstOrDefaultAsync();
+        var center = await _centerRepository.GetByIdAsync(centerId);
         if (center == null) return NotFound("Center ikke fundet");
 
-        var instructors = center.Admins
-            .Where(a => a.Role == "Instruktør")
-            .ToList();
-
+        var instructors = await _adminClient.GetInstructorsByCenterAsync(centerId);
         return Ok(instructors);
     }
 }

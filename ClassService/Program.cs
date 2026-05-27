@@ -19,14 +19,14 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
 // Repositories
 builder.Services.AddScoped<IClassRepository, ClassRepository>();
 builder.Services.AddScoped<IClassTemplateRepository, ClassTemplateRepository>();
-builder.Services.AddScoped<IClassroomRepository, ClassroomRepository>();
+builder.Services.AddScoped<ICenterRepository, CenterRepository>();  
 
 // Services
 builder.Services.AddScoped<ClassesService>();
 builder.Services.AddScoped<ClassTemplateService>();
 
 // Clients
-builder.Services.AddHttpClient<IInstructorClient, InstructorClient>(client =>
+builder.Services.AddHttpClient<IAdminClient, AdminClient>(client =>  
 {
     client.BaseAddress = new Uri(builder.Configuration["AdminService:BaseUrl"]!);
 });

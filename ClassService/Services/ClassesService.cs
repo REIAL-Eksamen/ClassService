@@ -1,22 +1,27 @@
 using ClassService.Repositories;
+using ClassService.Clients;
 using ClassService.Models;
 using ClassService.DTOs;
 
 namespace ClassService.Services;
+
 public class ClassesService : IClassesService
 {
     private readonly IClassRepository _classes;
     private readonly IClassTemplateRepository _templates;
-    private readonly IClassroomRepository _classrooms;
+    private readonly ICenterRepository _centers;
+    private readonly IAdminClient _adminClient;
 
     public ClassesService(
         IClassRepository classes,
         IClassTemplateRepository templates,
-        IClassroomRepository classrooms)
+        ICenterRepository centers,
+        IAdminClient adminClient)
     {
         _classes = classes;
         _templates = templates;
-        _classrooms = classrooms;
+        _centers = centers;
+        _adminClient = adminClient;
     }
 
     public Task<List<Class>> GetAllAsync() => _classes.GetAllAsync();
@@ -25,27 +30,33 @@ public class ClassesService : IClassesService
 
     public async Task<Class> CreateFromTemplateAsync(CreateClassDTO dto)
     {
-        if (dto.Classroom is null)
-            throw new ArgumentException("Classroom må ikke være null.");
+        var template = await _templates.GetByIdAsync(dto.TemplateId)
+            ?? throw new KeyNotFoundException($"Template {dto.TemplateId} findes ikke.");
 
-        var template = await _templates.GetByIdAsync(dto.ClassTemplateId)
-            ?? throw new KeyNotFoundException($"Template {dto.ClassTemplateId} findes ikke.");
+        var center = await _centers.GetByIdAsync(dto.CenterId)
+            ?? throw new KeyNotFoundException($"Center {dto.CenterId} findes ikke.");
 
-        var classroom = await _classrooms.GetByIdAndCenterAsync(dto.Classroom.ClassroomId, dto.CenterId);
-        if (classroom is null)
-            throw new KeyNotFoundException($"Classroom {dto.Classroom.ClassroomId} tilhører ikke center {dto.CenterId}.");
+        var classroom = center.Classrooms.FirstOrDefault(r => r.ClassroomId == dto.ClassroomId)
+            ?? throw new KeyNotFoundException($"Classroom {dto.ClassroomId} tilhører ikke center {dto.CenterId}.");
+
+        var admin = await _adminClient.GetAdminAsync(dto.InstructorId)
+            ?? throw new KeyNotFoundException($"Admin {dto.InstructorId} findes ikke.");
+
+        if (admin.CenterId != dto.CenterId)
+            throw new BadHttpRequestException($"Admin {dto.InstructorId} tilhører ikke center {dto.CenterId}.");
+
+        if (admin.Role != "Instruktør" && admin.Role != "Pt")
+            throw new BadHttpRequestException($"Admin {dto.InstructorId} har ikke en instruktørrolle.");
 
         var newClass = new Class
         {
-            ClassName = template.ClassName,
-            ClassDescription = template.ClassDescription,
-            ClassType = template.ClassType,
+            TemplateId = dto.TemplateId,
             InstructorId = dto.InstructorId,
             CenterId = dto.CenterId,
-            Classroom = dto.Classroom,
+            ClassroomId = dto.ClassroomId,
             StartTime = dto.StartTime,
             EndTime = dto.EndTime,
-            Status = ClassStatus.Scheduled
+            Status = ClassStatus.Planlagt
         };
 
         await _classes.InsertAsync(newClass);
@@ -54,25 +65,31 @@ public class ClassesService : IClassesService
 
     public async Task UpdateAsync(string id, CreateClassDTO dto)
     {
-        if (dto.Classroom is null)
-            throw new ArgumentException("Classroom må ikke være null.");
-
         var existing = await _classes.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Class {id} findes ikke.");
 
-        var template = await _templates.GetByIdAsync(dto.ClassTemplateId)
-            ?? throw new KeyNotFoundException($"Template {dto.ClassTemplateId} findes ikke.");
+        var template = await _templates.GetByIdAsync(dto.TemplateId)
+            ?? throw new KeyNotFoundException($"Template {dto.TemplateId} findes ikke.");
 
-        var classroom = await _classrooms.GetByIdAndCenterAsync(dto.Classroom.ClassroomId, dto.CenterId);
-        if (classroom is null)
-            throw new KeyNotFoundException($"Classroom {dto.Classroom.ClassroomId} tilhører ikke center {dto.CenterId}.");
+        var center = await _centers.GetByIdAsync(dto.CenterId)
+            ?? throw new KeyNotFoundException($"Center {dto.CenterId} findes ikke.");
 
-        existing.ClassName = template.ClassName;
-        existing.ClassDescription = template.ClassDescription;
-        existing.ClassType = template.ClassType;
+        var classroom = center.Classrooms.FirstOrDefault(r => r.ClassroomId == dto.ClassroomId)
+            ?? throw new KeyNotFoundException($"Classroom {dto.ClassroomId} tilhører ikke center {dto.CenterId}.");
+
+        var admin = await _adminClient.GetAdminAsync(dto.InstructorId)
+            ?? throw new KeyNotFoundException($"Admin {dto.InstructorId} findes ikke.");
+
+        if (admin.CenterId != dto.CenterId)
+            throw new BadHttpRequestException($"Admin {dto.InstructorId} tilhører ikke center {dto.CenterId}.");
+
+        if (admin.Role != "Instruktør" && admin.Role != "Pt")
+            throw new BadHttpRequestException($"Admin {dto.InstructorId} har ikke en instruktørrolle.");
+
+        existing.TemplateId = dto.TemplateId;
         existing.InstructorId = dto.InstructorId;
         existing.CenterId = dto.CenterId;
-        existing.Classroom = dto.Classroom;
+        existing.ClassroomId = dto.ClassroomId;
         existing.StartTime = dto.StartTime;
         existing.EndTime = dto.EndTime;
 
