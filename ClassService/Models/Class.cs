@@ -14,23 +14,26 @@ public enum ClassStatus
 public class Class
 {
     [BsonId]
-    [BsonElement("id")]
     [BsonRepresentation(BsonType.ObjectId)]
     public string? Id { get; set; }
 
     [BsonRepresentation(BsonType.ObjectId)]
-    public string TemplateId { get; set; } = "";    // → ClassTemplate._id
+    public string TemplateId { get; set; } = "";
 
     [BsonRepresentation(BsonType.ObjectId)]
-    public string InstructorId { get; set; } = "";  // → Admin._id
+    public string InstructorId { get; set; } = "";
 
     [BsonRepresentation(BsonType.ObjectId)]
-    public string CenterId { get; set; } = "";      // → Center._id
+    public string CenterId { get; set; } = "";
 
     [BsonRepresentation(BsonType.ObjectId)]
-    public string ClassroomId { get; set; } = "";   // → Center.Classrooms[]._id
+    public string ClassroomId { get; set; } = "";
 
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
+
     public ClassStatus Status { get; set; } = ClassStatus.Planlagt;
+    
+    [BsonRepresentation(BsonType.ObjectId)]
+    public List<string> UserIds { get; set; } = new();
 }

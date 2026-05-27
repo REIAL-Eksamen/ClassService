@@ -102,4 +102,17 @@ public class ClassesService : IClassesService
         if (!deleted)
             throw new KeyNotFoundException($"Class {id} findes ikke.");
     }
+    
+    public async Task AddMemberAsync(string classId, string userId)
+    {
+        var c = await _classes.GetByIdAsync(classId)
+                ?? throw new KeyNotFoundException("Class not found");
+
+        if (c.UserIds.Contains(userId))
+            throw new BadHttpRequestException("Member already enrolled");
+
+        c.UserIds.Add(userId);
+
+        await _classes.UpdateAsync(c.Id!, c);
+    }
 }

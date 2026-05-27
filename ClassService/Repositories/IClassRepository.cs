@@ -10,4 +10,5 @@ public interface IClassRepository
     Task InsertAsync(Class c);
     Task ReplaceAsync(string id, Class c);
     Task<bool> DeleteAsync(string id);
+    Task UpdateAsync(string id, Class c);
 }
