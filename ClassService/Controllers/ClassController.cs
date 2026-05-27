@@ -1,8 +1,10 @@
+using System.Security.Claims;
 using ClassService.DTOs;
 using ClassService.Services;
 using ClassService.Clients;
 using ClassService.Models;
 using ClassService.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClassService.Controllers;
@@ -114,5 +116,21 @@ public class ClassController : ControllerBase
         }
 
         return Ok(result);
+    }
+    
+    [Authorize]
+    [HttpPost("{classId}/members")]
+    public async Task<IActionResult> AddMember(string classId)
+    {
+        var userId =
+            User.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+            User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+
+        if (userId is null)
+            return Unauthorized();
+
+        await _service.AddMemberAsync(classId, userId);
+
+        return NoContent();
     }
 }

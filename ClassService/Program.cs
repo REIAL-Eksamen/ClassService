@@ -1,6 +1,9 @@
+using System.Text;
 using ClassService.Services;
 using ClassService.Clients;
 using ClassService.Repositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using MongoDB.Driver;
 
@@ -8,6 +11,23 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = "FitLife",
+
+            ValidateAudience = true,
+            ValidAudience = "FitLifeUsers",
+
+            ValidateLifetime = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("this-is-a-development-secret-key-with-enough-length")),
+            ValidateIssuerSigningKey = true,
+        };
+    });
 
 // MongoDB / CosmosDB
 builder.Services.AddSingleton<IMongoClient>(
@@ -40,6 +60,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

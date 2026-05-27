@@ -32,4 +32,7 @@ public class ClassRepository : IClassRepository
         var result = await _classes.DeleteOneAsync(x => x.Id == id);
         return result.DeletedCount > 0;
     }
+    
+    public Task UpdateAsync(string id, Class c) =>
+        _classes.ReplaceOneAsync(x => x.Id == id, c);
 }
