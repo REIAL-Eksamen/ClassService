@@ -87,6 +87,36 @@ public class ClassController : ControllerBase
         catch (KeyNotFoundException e) { return NotFound(e.Message); }
     }
 
+    [HttpGet("{id}/overview")]
+    public async Task<ActionResult<ClassOverviewDto>> GetOverviewById(string id)
+    {
+        var classItem = await _service.GetByIdAsync(id);
+        if (classItem is null)
+            return NotFound($"Class {id} findes ikke.");
+
+        var center = await _centerRepository.GetByIdAsync(classItem.CenterId);
+        var template = await _templateRepository.GetByIdAsync(classItem.TemplateId);
+        var admin = await _adminClient.GetAdminAsync(classItem.InstructorId);
+        var classroom = center?.Classrooms.FirstOrDefault(r => r.ClassroomId == classItem.ClassroomId);
+
+        return Ok(new ClassOverviewDto
+        {
+            Id = classItem.Id ?? "",
+            CenterName = center?.Name ?? "",
+            ClassName = template?.ClassName ?? "",
+            ClassDescription = template?.ClassDescription ?? "",
+            ClassType = template?.ClassType ?? "",
+            InstructorFirstName = admin?.FirstName ?? "",
+            InstructorLastName = admin?.LastName ?? "",
+            InstructorName = $"{admin?.FirstName} {admin?.LastName}".Trim(),
+            StartTime = classItem.StartTime,
+            EndTime = classItem.EndTime,
+            Status = classItem.Status.ToString(),
+            ClassroomName = classroom?.Name ?? "",
+            Capacity = classroom?.Capacity ?? 0
+        });
+    }
+
     [HttpGet("overview")]
     public async Task<ActionResult<List<ClassOverviewDto>>> GetOverview()
     {
@@ -105,6 +135,7 @@ public class ClassController : ControllerBase
                 Id = classItem.Id ?? "",
                 CenterName = center?.Name ?? "",
                 ClassName = template?.ClassName ?? "",
+                ClassDescription = template?.ClassDescription ?? "",
                 ClassType = template?.ClassType ?? "",
                 InstructorFirstName = admin?.FirstName ?? "",
                 InstructorLastName = admin?.LastName ?? "",
