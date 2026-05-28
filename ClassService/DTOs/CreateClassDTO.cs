@@ -1,5 +1,6 @@
 namespace ClassService.DTOs;
 
+// Bruges når der skal oprettes eller opdateres et konkret hold via API'et.
 public class CreateClassDTO
 {
     public string TemplateId { get; set; } = "";

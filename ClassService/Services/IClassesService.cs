@@ -3,6 +3,8 @@ using ClassService.DTOs;
 
 namespace ClassService.Services;
 
+//IClassesService definerer kontrakten for alle hold-relaterede handlinger,
+//såsom at oprette, opdatere, aflyse og hente hold.
 public interface IClassesService
 {
     Task<List<Class>> GetAllAsync();

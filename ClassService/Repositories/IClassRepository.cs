@@ -2,6 +2,7 @@ using ClassService.Models;
 
 namespace ClassService.Repositories;
 
+// Definerer hvilke databasehandlinger resten af systemet kan bruge til konkrete hold.
 public interface IClassRepository
 {
     Task<List<Class>> GetAllAsync();

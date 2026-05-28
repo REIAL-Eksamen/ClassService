@@ -30,21 +30,27 @@ public class ClassesService : IClassesService
 
     public async Task<Class> CreateFromTemplateAsync(CreateClassDTO dto)
     {
+        // Et hold oprettes ud fra en template, så vi sikrer først at templaten findes.
         var template = await _templates.GetByIdAsync(dto.TemplateId)
             ?? throw new KeyNotFoundException($"Template {dto.TemplateId} findes ikke.");
 
+        // Centeret skal findes, fordi holdet altid er knyttet til en fysisk lokation.
         var center = await _centers.GetByIdAsync(dto.CenterId)
             ?? throw new KeyNotFoundException($"Center {dto.CenterId} findes ikke.");
 
+        // Lokalet skal høre til det valgte center, ellers kan holdet oprettes med ugyldig placering.
         var classroom = center.Classrooms.FirstOrDefault(r => r.ClassroomId == dto.ClassroomId)
             ?? throw new KeyNotFoundException($"Classroom {dto.ClassroomId} tilhører ikke center {dto.CenterId}.");
 
+        // Instruktørdata ejes af AdminService, så ClassService henter og validerer instruktøren derfra.
         var admin = await _adminClient.GetAdminAsync(dto.InstructorId)
             ?? throw new KeyNotFoundException($"Admin {dto.InstructorId} findes ikke.");
 
+        // Instruktøren skal være tilknyttet samme center som holdet.
         if (admin.CenterId != dto.CenterId)
             throw new BadHttpRequestException($"Admin {dto.InstructorId} tilhører ikke center {dto.CenterId}.");
 
+        // Kun medarbejdere med en instruktørrolle må tilknyttes et hold.
         if (admin.Role != "Instruktør" && admin.Role != "Pt")
             throw new BadHttpRequestException($"Admin {dto.InstructorId} har ikke en instruktørrolle.");
 
@@ -67,10 +73,12 @@ public class ClassesService : IClassesService
     {
         var existing = await _classes.GetByIdAsync(id)
             ?? throw new KeyNotFoundException($"Class {id} findes ikke.");
-
+        
+        // Ved opdatering genbruger vi samme validering som ved oprettelse, så holdet ikke ender med ugyldige relationer.
         var template = await _templates.GetByIdAsync(dto.TemplateId)
             ?? throw new KeyNotFoundException($"Template {dto.TemplateId} findes ikke.");
 
+        
         var center = await _centers.GetByIdAsync(dto.CenterId)
             ?? throw new KeyNotFoundException($"Center {dto.CenterId} findes ikke.");
 
@@ -108,6 +116,7 @@ public class ClassesService : IClassesService
         var existing = await _classes.GetByIdAsync(id);
         if (existing is null) return null;
 
+        // Vi sletter ikke holdet ved aflysning, fordi historik og bookinger stadig kan have brug for referencen.
         existing.Status = ClassStatus.Aflyst;
         await _classes.UpdateAsync(id, existing);
         return existing;
@@ -118,6 +127,7 @@ public class ClassesService : IClassesService
         var c = await _classes.GetByIdAsync(classId)
                 ?? throw new KeyNotFoundException("Class not found");
 
+        // Samme bruger må ikke tilmeldes det samme hold flere gange.
         if (c.UserIds.Contains(userId))
             throw new BadHttpRequestException("Member already enrolled");
 

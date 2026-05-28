@@ -1,5 +1,5 @@
 using ClassService.Models;
-
+// Bruges til at samle information om et hold, så frontend kan få én samlet visning.
 public class ClassViewModel
 {
     public string? Id { get; set; }

@@ -9,28 +9,34 @@ namespace ClassService.Controllers;
 [Route("api/centers")]
 public class CenterController : ControllerBase
 {
-    private readonly ICenterRepository _centerRepository;
-    private readonly IAdminClient _adminClient;
+    private readonly ICenterRepository _centerRepository; // Repository bruges til at hente centre og lokaler fra databasen.
+    private readonly IAdminClient _adminClient; // AdminClient bruges til at hente instruktører fra AdminService.
 
+    // Dependencies bliver givet til controlleren gennem dependency injection.
     public CenterController(ICenterRepository centerRepository, IAdminClient adminClient)
     {
         _centerRepository = centerRepository;
         _adminClient = adminClient;
     }
 
-    // Henter alle classrooms på et center
+    // GET /api/centers/{centerId}/classrooms
+    // Henter alle lokaler på et bestemt center.
     [HttpGet("{centerId}/classrooms")]
     public async Task<IActionResult> GetClassrooms(string centerId)
     {
+        // Finder centeret i databasen.
         var center = await _centerRepository.GetByIdAsync(centerId);
-        if (center == null) return NotFound("Center ikke fundet");
+        if (center == null) return NotFound("Center ikke fundet"); // Hvis centeret ikke findes, returneres 404 Not Found.
 
         return Ok(center.Classrooms);
     }
     
+    // GET /api/centers/all
+    // Henter alle centre.
     [HttpGet("all")]
     public async Task<IActionResult> GetAll()
     {
+        // Finder alle centre i databasen.
         var centers = await _centerRepository.GetAllAsync();
         return Ok(centers);
     }
@@ -42,6 +48,7 @@ public class CenterController : ControllerBase
         var center = await _centerRepository.GetByIdAsync(centerId);
         if (center == null) return NotFound("Center ikke fundet");
 
+        // Henter instruktørerne fra AdminService gennem AdminClient.
         var instructors = await _adminClient.GetInstructorsByCenterAsync(centerId);
         return Ok(instructors);
     }
