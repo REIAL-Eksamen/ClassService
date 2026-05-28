@@ -105,13 +105,16 @@ public class ClassController : ControllerBase
                 Id = classItem.Id ?? "",
                 CenterName = center?.Name ?? "",
                 ClassName = template?.ClassName ?? "",
+                ClassType = template?.ClassType ?? "",
                 InstructorFirstName = admin?.FirstName ?? "",
                 InstructorLastName = admin?.LastName ?? "",
+                InstructorName = $"{admin?.FirstName} {admin?.LastName}".Trim(),
                 StartTime = classItem.StartTime,
                 EndTime = classItem.EndTime,
                 Status = classItem.Status.ToString(),
                 ClassroomName = classroom?.Name ?? "",
                 Capacity = classroom?.Capacity ?? 0
+               
             });
         }
 
