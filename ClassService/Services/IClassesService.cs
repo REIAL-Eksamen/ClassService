@@ -11,5 +11,6 @@ public interface IClassesService
     Task<Class> CreateFromTemplateAsync(CreateClassDTO dto);
     Task UpdateAsync(string id, CreateClassDTO dto);
     Task DeleteAsync(string id);
+    Task<Class?> CancelAsync(string id);
     Task AddMemberAsync(string classId, string userId);
 }

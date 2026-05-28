@@ -102,6 +102,16 @@ public class ClassesService : IClassesService
         if (!deleted)
             throw new KeyNotFoundException($"Class {id} findes ikke.");
     }
+
+    public async Task<Class?> CancelAsync(string id)
+    {
+        var existing = await _classes.GetByIdAsync(id);
+        if (existing is null) return null;
+
+        existing.Status = ClassStatus.Aflyst;
+        await _classes.UpdateAsync(id, existing);
+        return existing;
+    }
     
     public async Task AddMemberAsync(string classId, string userId)
     {

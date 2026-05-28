@@ -1,11 +1,14 @@
 using System.Security.Claims;
 using ClassService.DTOs;
+using FitLife.Events;
 using ClassService.Services;
 using ClassService.Clients;
 using ClassService.Models;
 using ClassService.Repositories;
+using MassTransit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ClassService.Controllers;
 
@@ -13,22 +16,30 @@ namespace ClassService.Controllers;
 [Route("api/[controller]")]
 public class ClassController : ControllerBase
 {
+    private const string OverviewCacheKey = "class_overview";
+
     private readonly IClassesService _service;
     private readonly IClassTemplateService _templateService;
     private readonly IAdminClient _adminClient;
     private readonly ICenterRepository _centerRepository;
     private readonly IClassTemplateRepository _templateRepository;
+    private readonly IMemoryCache _cache;
+    private readonly IPublishEndpoint _publishEndpoint;
 
     public ClassController(
         IClassesService service,
         IAdminClient adminClient,
         ICenterRepository centerRepository,
-        IClassTemplateRepository templateRepository)
+        IClassTemplateRepository templateRepository,
+        IMemoryCache cache,
+        IPublishEndpoint publishEndpoint)
     {
         _service = service;
         _adminClient = adminClient;
         _centerRepository = centerRepository;
         _templateRepository = templateRepository;
+        _cache = cache;
+        _publishEndpoint = publishEndpoint;
     }
 
     [HttpGet]
@@ -55,6 +66,7 @@ public class ClassController : ControllerBase
         try
         {
             var newClass = await _service.CreateFromTemplateAsync(dto);
+            _cache.Remove(OverviewCacheKey);
             return CreatedAtAction(nameof(GetById), new { id = newClass.Id }, newClass);
         }
         catch (KeyNotFoundException e) { return NotFound(e.Message); }
@@ -70,6 +82,7 @@ public class ClassController : ControllerBase
         try
         {
             await _service.UpdateAsync(id, dto);
+            _cache.Remove(OverviewCacheKey);
             return NoContent();
         }
         catch (KeyNotFoundException e) { return NotFound(e.Message); }
@@ -82,9 +95,24 @@ public class ClassController : ControllerBase
         try
         {
             await _service.DeleteAsync(id);
+            _cache.Remove(OverviewCacheKey);
             return NoContent();
         }
         catch (KeyNotFoundException e) { return NotFound(e.Message); }
+    }
+
+    [HttpPatch("{id}/cancel")]
+    public async Task<IActionResult> Cancel(string id)
+    {
+        var cancelled = await _service.CancelAsync(id);
+
+        if (cancelled is null)
+            return NotFound($"Class {id} findes ikke.");
+
+        _cache.Remove(OverviewCacheKey);
+        await _publishEndpoint.Publish(new ClassCancelledEvent { ClassId = id });
+
+        return NoContent();
     }
 
     [HttpGet("{id}/overview")]
@@ -120,6 +148,9 @@ public class ClassController : ControllerBase
     [HttpGet("overview")]
     public async Task<ActionResult<List<ClassOverviewDto>>> GetOverview()
     {
+        if (_cache.TryGetValue(OverviewCacheKey, out List<ClassOverviewDto>? cached))
+            return Ok(cached);
+
         var classes = await _service.GetAllAsync();
         var result = new List<ClassOverviewDto>();
 
@@ -145,10 +176,10 @@ public class ClassController : ControllerBase
                 Status = classItem.Status.ToString(),
                 ClassroomName = classroom?.Name ?? "",
                 Capacity = classroom?.Capacity ?? 0
-               
             });
         }
 
+        _cache.Set(OverviewCacheKey, result, TimeSpan.FromMinutes(5));
         return Ok(result);
     }
     

@@ -1,3 +1,4 @@
+using MassTransit;
 using System.Text;
 using ClassService.Services;
 using ClassService.Clients;
@@ -44,6 +45,21 @@ builder.Services.AddScoped<ICenterRepository, CenterRepository>();
 // Services
 builder.Services.AddScoped<IClassesService, ClassesService>();
 builder.Services.AddScoped<IClassTemplateService, ClassTemplateService>();
+
+builder.Services.AddMemoryCache();
+
+builder.Services.AddMassTransit(x =>
+{
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMQ:Host"] ?? "rabbitmq", "/", h =>
+        {
+            h.Username("guest");
+            h.Password("guest");
+        });
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 // Clients
 builder.Services.AddHttpClient<IAdminClient, AdminClient>(client =>  
