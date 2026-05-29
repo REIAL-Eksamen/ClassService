@@ -2,6 +2,7 @@ using ClassService.Models;
 
 namespace ClassService.Repositories;
 
+// Definerer hvilke databasehandlinger resten af systemet kan bruge til holdtemplates.
 public interface IClassTemplateRepository
 {
     Task<List<ClassTemplate>> GetAllAsync();

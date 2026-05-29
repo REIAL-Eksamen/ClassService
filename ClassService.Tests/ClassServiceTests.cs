@@ -1,7 +1,9 @@
+using ClassService.Clients;
 using ClassService.DTOs;
 using ClassService.Models;
 using ClassService.Repositories;
 using ClassService.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -12,7 +14,8 @@ public class ClassesServiceTests
 {
     private Mock<IClassRepository> _classesMock;
     private Mock<IClassTemplateRepository> _templatesMock;
-    private Mock<IClassroomRepository> _classroomsMock;
+    private Mock<ICenterRepository> _centersMock;
+    private Mock<IAdminClient> _adminClientMock;
     private ClassesService _sut;
 
     [TestInitialize]
@@ -20,8 +23,13 @@ public class ClassesServiceTests
     {
         _classesMock = new Mock<IClassRepository>();
         _templatesMock = new Mock<IClassTemplateRepository>();
-        _classroomsMock = new Mock<IClassroomRepository>();
-        _sut = new ClassesService(_classesMock.Object, _templatesMock.Object, _classroomsMock.Object);
+        _centersMock = new Mock<ICenterRepository>();
+        _adminClientMock = new Mock<IAdminClient>();
+        _sut = new ClassesService(
+            _classesMock.Object,
+            _templatesMock.Object,
+            _centersMock.Object,
+            _adminClientMock.Object);
     }
 
     // ──────────────────────────────────────────────
@@ -31,13 +39,12 @@ public class ClassesServiceTests
     [TestMethod]
     public async Task GetAllAsync_ReturnsList()
     {
-        var expected = new List<Class> { new Class { Id = "1", ClassName = "Yoga" } };
+        var expected = new List<Class> { new Class { Id = "1" } };
         _classesMock.Setup(r => r.GetAllAsync()).ReturnsAsync(expected);
 
         var result = await _sut.GetAllAsync();
 
         Assert.AreEqual(1, result.Count);
-        Assert.AreEqual("Yoga", result[0].ClassName);
     }
 
     // ──────────────────────────────────────────────
@@ -47,13 +54,13 @@ public class ClassesServiceTests
     [TestMethod]
     public async Task GetByIdAsync_WhenExists_ReturnsClass()
     {
-        var expected = new Class { Id = "abc", ClassName = "Pilates" };
+        var expected = new Class { Id = "abc" };
         _classesMock.Setup(r => r.GetByIdAsync("abc")).ReturnsAsync(expected);
 
         var result = await _sut.GetByIdAsync("abc");
 
         Assert.IsNotNull(result);
-        Assert.AreEqual("Pilates", result.ClassName);
+        Assert.AreEqual("abc", result.Id);
     }
 
     [TestMethod]
@@ -91,40 +98,36 @@ public class ClassesServiceTests
     public async Task CreateFromTemplateAsync_ValidDto_InsertsAndReturnsClass()
     {
         var dto = BuildValidCreateClassDTO();
-        var template = BuildTemplate(dto.ClassTemplateId);
-        var classroom = new Classroom();
-
-        _templatesMock.Setup(r => r.GetByIdAsync(dto.ClassTemplateId)).ReturnsAsync(template);
-        _classroomsMock.Setup(r => r.GetByIdAndCenterAsync(dto.Classroom.ClassroomId, dto.CenterId))
-                       .ReturnsAsync(classroom);
+        SetupValidMocks(dto);
         _classesMock.Setup(r => r.InsertAsync(It.IsAny<Class>())).Returns(Task.CompletedTask);
 
         var result = await _sut.CreateFromTemplateAsync(dto);
 
         Assert.IsNotNull(result);
-        Assert.AreEqual(template.ClassName, result.ClassName);
-        Assert.AreEqual(template.ClassDescription, result.ClassDescription);
-        Assert.AreEqual(template.ClassType, result.ClassType);
+        Assert.AreEqual(dto.TemplateId, result.TemplateId);
         Assert.AreEqual(dto.InstructorId, result.InstructorId);
-        Assert.AreEqual(ClassStatus.Scheduled, result.Status);
+        Assert.AreEqual(dto.CenterId, result.CenterId);
+        Assert.AreEqual(dto.ClassroomId, result.ClassroomId);
+        Assert.AreEqual(ClassStatus.Planlagt, result.Status);
         _classesMock.Verify(r => r.InsertAsync(It.IsAny<Class>()), Times.Once);
-    }
-
-    [TestMethod]
-    public async Task CreateFromTemplateAsync_NullClassroom_ThrowsArgumentException()
-    {
-        var dto = BuildValidCreateClassDTO();
-        dto.Classroom = null;
-
-        await Assert.ThrowsExactlyAsync<ArgumentException>(
-            () => _sut.CreateFromTemplateAsync(dto));
     }
 
     [TestMethod]
     public async Task CreateFromTemplateAsync_TemplateNotFound_ThrowsKeyNotFoundException()
     {
         var dto = BuildValidCreateClassDTO();
-        _templatesMock.Setup(r => r.GetByIdAsync(dto.ClassTemplateId)).ReturnsAsync((ClassTemplate?)null);
+        _templatesMock.Setup(r => r.GetByIdAsync(dto.TemplateId)).ReturnsAsync((ClassTemplate?)null);
+
+        await Assert.ThrowsExactlyAsync<KeyNotFoundException>(
+            () => _sut.CreateFromTemplateAsync(dto));
+    }
+
+    [TestMethod]
+    public async Task CreateFromTemplateAsync_CenterNotFound_ThrowsKeyNotFoundException()
+    {
+        var dto = BuildValidCreateClassDTO();
+        _templatesMock.Setup(r => r.GetByIdAsync(dto.TemplateId)).ReturnsAsync(BuildTemplate(dto.TemplateId));
+        _centersMock.Setup(r => r.GetByIdAsync(dto.CenterId)).ReturnsAsync((Center?)null);
 
         await Assert.ThrowsExactlyAsync<KeyNotFoundException>(
             () => _sut.CreateFromTemplateAsync(dto));
@@ -134,13 +137,42 @@ public class ClassesServiceTests
     public async Task CreateFromTemplateAsync_ClassroomNotInCenter_ThrowsKeyNotFoundException()
     {
         var dto = BuildValidCreateClassDTO();
-        var template = BuildTemplate(dto.ClassTemplateId);
-
-        _templatesMock.Setup(r => r.GetByIdAsync(dto.ClassTemplateId)).ReturnsAsync(template);
-        _classroomsMock.Setup(r => r.GetByIdAndCenterAsync(dto.Classroom.ClassroomId, dto.CenterId))
-                       .ReturnsAsync((Classroom?)null);
+        _templatesMock.Setup(r => r.GetByIdAsync(dto.TemplateId)).ReturnsAsync(BuildTemplate(dto.TemplateId));
+        _centersMock.Setup(r => r.GetByIdAsync(dto.CenterId)).ReturnsAsync(new Center { Id = dto.CenterId, Classrooms = new() });
 
         await Assert.ThrowsExactlyAsync<KeyNotFoundException>(
+            () => _sut.CreateFromTemplateAsync(dto));
+    }
+
+    [TestMethod]
+    public async Task CreateFromTemplateAsync_AdminNotFound_ThrowsKeyNotFoundException()
+    {
+        var dto = BuildValidCreateClassDTO();
+        _templatesMock.Setup(r => r.GetByIdAsync(dto.TemplateId)).ReturnsAsync(BuildTemplate(dto.TemplateId));
+        _centersMock.Setup(r => r.GetByIdAsync(dto.CenterId)).ReturnsAsync(BuildCenter(dto.CenterId, dto.ClassroomId));
+        _adminClientMock.Setup(r => r.GetAdminAsync(dto.InstructorId)).ReturnsAsync((AdminCenterDTO?)null);
+
+        await Assert.ThrowsExactlyAsync<KeyNotFoundException>(
+            () => _sut.CreateFromTemplateAsync(dto));
+    }
+
+    [TestMethod]
+    public async Task CreateFromTemplateAsync_AdminWrongCenter_ThrowsBadHttpRequestException()
+    {
+        var dto = BuildValidCreateClassDTO();
+        SetupValidMocks(dto, adminCenterId: "et-andet-center");
+
+        await Assert.ThrowsExactlyAsync<BadHttpRequestException>(
+            () => _sut.CreateFromTemplateAsync(dto));
+    }
+
+    [TestMethod]
+    public async Task CreateFromTemplateAsync_AdminWrongRole_ThrowsBadHttpRequestException()
+    {
+        var dto = BuildValidCreateClassDTO();
+        SetupValidMocks(dto, adminRole: "Receptionist");
+
+        await Assert.ThrowsExactlyAsync<BadHttpRequestException>(
             () => _sut.CreateFromTemplateAsync(dto));
     }
 
@@ -153,30 +185,17 @@ public class ClassesServiceTests
     {
         var id = "class1";
         var dto = BuildValidCreateClassDTO();
-        var existing = new Class { Id = id, ClassName = "Gammel" };
-        var template = BuildTemplate(dto.ClassTemplateId);
-        var classroom = new Classroom();
+        var existing = new Class { Id = id };
 
         _classesMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(existing);
-        _templatesMock.Setup(r => r.GetByIdAsync(dto.ClassTemplateId)).ReturnsAsync(template);
-        _classroomsMock.Setup(r => r.GetByIdAndCenterAsync(dto.Classroom.ClassroomId, dto.CenterId))
-                       .ReturnsAsync(classroom);
+        SetupValidMocks(dto);
         _classesMock.Setup(r => r.ReplaceAsync(id, It.IsAny<Class>())).Returns(Task.CompletedTask);
 
         await _sut.UpdateAsync(id, dto);
 
-        Assert.AreEqual(template.ClassName, existing.ClassName);
+        Assert.AreEqual(dto.TemplateId, existing.TemplateId);
+        Assert.AreEqual(dto.ClassroomId, existing.ClassroomId);
         _classesMock.Verify(r => r.ReplaceAsync(id, existing), Times.Once);
-    }
-
-    [TestMethod]
-    public async Task UpdateAsync_NullClassroom_ThrowsArgumentException()
-    {
-        var dto = BuildValidCreateClassDTO();
-        dto.Classroom = null;
-
-        await Assert.ThrowsExactlyAsync<ArgumentException>(
-            () => _sut.UpdateAsync("id", dto));
     }
 
     [TestMethod]
@@ -187,34 +206,6 @@ public class ClassesServiceTests
 
         await Assert.ThrowsExactlyAsync<KeyNotFoundException>(
             () => _sut.UpdateAsync("mangler", dto));
-    }
-
-    [TestMethod]
-    public async Task UpdateAsync_TemplateNotFound_ThrowsKeyNotFoundException()
-    {
-        var id = "class1";
-        var dto = BuildValidCreateClassDTO();
-        _classesMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(new Class { Id = id });
-        _templatesMock.Setup(r => r.GetByIdAsync(dto.ClassTemplateId)).ReturnsAsync((ClassTemplate?)null);
-
-        await Assert.ThrowsExactlyAsync<KeyNotFoundException>(
-            () => _sut.UpdateAsync(id, dto));
-    }
-
-    [TestMethod]
-    public async Task UpdateAsync_ClassroomNotInCenter_ThrowsKeyNotFoundException()
-    {
-        var id = "class1";
-        var dto = BuildValidCreateClassDTO();
-        var template = BuildTemplate(dto.ClassTemplateId);
-
-        _classesMock.Setup(r => r.GetByIdAsync(id)).ReturnsAsync(new Class { Id = id });
-        _templatesMock.Setup(r => r.GetByIdAsync(dto.ClassTemplateId)).ReturnsAsync(template);
-        _classroomsMock.Setup(r => r.GetByIdAndCenterAsync(dto.Classroom.ClassroomId, dto.CenterId))
-                       .ReturnsAsync((Classroom?)null);
-
-        await Assert.ThrowsExactlyAsync<KeyNotFoundException>(
-            () => _sut.UpdateAsync(id, dto));
     }
 
     // ──────────────────────────────────────────────
@@ -246,10 +237,10 @@ public class ClassesServiceTests
 
     private static CreateClassDTO BuildValidCreateClassDTO() => new CreateClassDTO
     {
-        ClassTemplateId = "template1",
+        TemplateId = "template1",
         InstructorId = "instructor1",
         CenterId = "center1",
-        Classroom = new ClassroomDto { ClassroomId = "room1" },
+        ClassroomId = "room1",
         StartTime = DateTime.UtcNow,
         EndTime = DateTime.UtcNow.AddHours(1)
     };
@@ -261,4 +252,25 @@ public class ClassesServiceTests
         ClassDescription = "Afslappende yoga",
         ClassType = "Wellness"
     };
+
+    private static Center BuildCenter(string centerId, string classroomId) => new Center
+    {
+        Id = centerId,
+        Classrooms = new List<Classroom>
+        {
+            new Classroom { ClassroomId = classroomId, Name = "Sal 1", Capacity = 20 }
+        }
+    };
+
+    private void SetupValidMocks(CreateClassDTO dto, string? adminCenterId = null, string adminRole = "Instruktør")
+    {
+        _templatesMock.Setup(r => r.GetByIdAsync(dto.TemplateId)).ReturnsAsync(BuildTemplate(dto.TemplateId));
+        _centersMock.Setup(r => r.GetByIdAsync(dto.CenterId)).ReturnsAsync(BuildCenter(dto.CenterId, dto.ClassroomId));
+        _adminClientMock.Setup(r => r.GetAdminAsync(dto.InstructorId)).ReturnsAsync(new AdminCenterDTO
+        {
+            AdminId = dto.InstructorId,
+            CenterId = adminCenterId ?? dto.CenterId,
+            Role = adminRole
+        });
+    }
 }
